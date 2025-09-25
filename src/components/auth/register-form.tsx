@@ -14,11 +14,12 @@ import Link from "next/link"
 import { useForm, SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useAuth, useUser } from "@/firebase"
+import { useAuth, useUser, useFirestore, setDocumentNonBlocking } from "@/firebase"
 import { initiateEmailSignUp } from "@/firebase/non-blocking-login"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { doc } from "firebase/firestore";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -32,6 +33,7 @@ type RegisterFields = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -45,8 +47,19 @@ export function RegisterForm() {
   });
   
   const onSubmit: SubmitHandler<RegisterFields> = (data) => {
-    if (!auth) return;
-    initiateEmailSignUp(auth, data.email, data.password, toast);
+    if (!auth || !firestore) return;
+
+    initiateEmailSignUp(auth, data.email, data.password, toast, (newUser) => {
+        // After successful signup, create the user profile document
+        const userProfileRef = doc(firestore, "users", newUser.uid);
+        const userProfileData = {
+            id: newUser.uid,
+            email: newUser.email,
+            location: 'Not set',
+            alertPreferences: ['earthquake', 'flood', 'cyclone', 'wildfire']
+        };
+        setDocumentNonBlocking(userProfileRef, userProfileData, { merge: true });
+    });
   };
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
 import {
   Auth, // Import Auth type for type hinting
+  User, // Import User type
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -21,8 +22,19 @@ export function initiateAnonymousSignIn(authInstance: Auth): void {
 }
 
 /** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string, toast: ToastFunction): void {
+export function initiateEmailSignUp(
+  authInstance: Auth,
+  email: string,
+  password: string,
+  toast: ToastFunction,
+  onSuccess?: (user: User) => void
+): void {
   createUserWithEmailAndPassword(authInstance, email, password)
+    .then((userCredential) => {
+        if (onSuccess) {
+            onSuccess(userCredential.user);
+        }
+    })
     .catch((error: FirebaseError) => {
         let description = "An unknown error occurred.";
         if (error.code === 'auth/email-already-in-use') {
