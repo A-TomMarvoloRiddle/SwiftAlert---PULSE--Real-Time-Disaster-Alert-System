@@ -13,9 +13,11 @@ import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { SystemAnalytics } from '@/components/admin/system-analytics';
 import { translateText } from '@/ai/flows/translate-text';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const severityVariantMap = {
   low: "default",
@@ -88,9 +90,17 @@ export default function AdminPage() {
         timestamp: new Date().toISOString(),
         channel: "dashboard", // Simulating a dashboard-triggered alert
     };
-
-    // This is a non-blocking call
-    addDocumentNonBlocking(alertsCollection, newAlert);
+    
+    addDoc(alertsCollection, newAlert).catch(error => {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: alertsCollection.path,
+            operation: 'create',
+            requestResourceData: newAlert,
+          })
+        )
+      });
 
     toast({
         title: "Alert Sent",
