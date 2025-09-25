@@ -19,13 +19,7 @@ const EonetEventSchema = z.object({
   description: z.string().nullable(),
   categories: z.array(z.object({ id: z.string(), title: z.string() })),
   sources: z.array(z.object({ id: z.string(), url: z.string() })),
-  geometries: z.array(
-    z.object({
-      date: z.string(),
-      type: z.literal('Point'),
-      coordinates: z.tuple([z.number(), z.number()]), // [longitude, latitude]
-    })
-  ),
+  geometries: z.array(z.any()), // Allow any object in the array to make parsing more robust
 });
 
 const EonetResponseSchema = z.object({
@@ -104,9 +98,10 @@ const fetchDisasterDataFlow = ai.defineFlow(
         // Use the mapping, but default to 'low' if no severity mapping exists
         const severity = categoryToSeverity[categoryId] || 'low'; 
         
-        const geometry = event.geometries.find(g => g.type === 'Point');
+        // Find the first geometry object that is a point.
+        const geometry = event.geometries.find(g => g && g.type === 'Point' && Array.isArray(g.coordinates));
         if (!geometry) {
-          return null; // Still skip events without a point location
+          return null; // Skip events without a valid point location
         }
 
         return {
