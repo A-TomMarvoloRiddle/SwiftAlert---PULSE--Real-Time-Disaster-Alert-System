@@ -18,6 +18,7 @@ import { useAuth, useUser } from "@/firebase"
 import { initiateEmailSignIn } from "@/firebase/non-blocking-login"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -30,6 +31,7 @@ export function LoginForm() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   const {
     register,
@@ -41,7 +43,7 @@ export function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginFields> = (data) => {
     if (!auth) return;
-    initiateEmailSignIn(auth, data.email, data.password);
+    initiateEmailSignIn(auth, data.email, data.password, toast);
   }
   
   useEffect(() => {

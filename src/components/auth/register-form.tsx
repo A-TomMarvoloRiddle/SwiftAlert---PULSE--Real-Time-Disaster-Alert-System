@@ -18,6 +18,7 @@ import { useAuth, useUser } from "@/firebase"
 import { initiateEmailSignUp } from "@/firebase/non-blocking-login"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -33,6 +34,7 @@ export function RegisterForm() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   const {
     register,
@@ -44,8 +46,7 @@ export function RegisterForm() {
   
   const onSubmit: SubmitHandler<RegisterFields> = (data) => {
     if (!auth) return;
-    // For simplicity, we are not storing first/last name in this example
-    initiateEmailSignUp(auth, data.email, data.password);
+    initiateEmailSignUp(auth, data.email, data.password, toast);
   };
 
   useEffect(() => {
