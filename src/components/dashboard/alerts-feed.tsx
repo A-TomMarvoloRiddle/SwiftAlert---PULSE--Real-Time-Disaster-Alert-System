@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -13,8 +14,7 @@ import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "../ui/skeleton";
-import { useEffect, useState } from "react";
-import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
+import { useMemo } from "react";
 
 const severityVariantMap = {
   low: "default",
@@ -23,26 +23,16 @@ const severityVariantMap = {
   critical: "destructive",
 } as const;
 
-export function AlertsFeed() {
-  const [disasters, setDisasters] = useState<Disaster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface AlertsFeedProps {
+    disasters: Disaster[];
+    isLoading: boolean;
+}
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchDisasterData();
-        // Sort by most recent
-        const sortedData = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setDisasters(sortedData);
-      } catch (error) {
-        console.error("Failed to fetch disaster data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
+export function AlertsFeed({ disasters, isLoading }: AlertsFeedProps) {
+
+  const sortedDisasters = useMemo(() => {
+    return [...disasters].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [disasters]);
 
   return (
     <Card>
@@ -78,7 +68,7 @@ export function AlertsFeed() {
                 </div>
               </>
             )}
-            {disasters && disasters.map((disaster) => {
+            {!isLoading && sortedDisasters.map((disaster) => {
               const Icon = getDisasterIcon(disaster.type);
               return (
                 <div key={disaster.id} className="flex items-start gap-4">
@@ -100,6 +90,11 @@ export function AlertsFeed() {
                 </div>
               );
             })}
+             {!isLoading && disasters.length === 0 && (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                    No active disaster events.
+                </div>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

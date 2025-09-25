@@ -1,6 +1,6 @@
+
 "use client";
 
-import { useSearchParams } from 'next/navigation';
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
@@ -10,8 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect, useMemo, useState } from 'react';
-import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
+import { useEffect, useMemo } from 'react';
 
 const severityConfig = {
   low: {
@@ -43,6 +42,9 @@ function Markers({ disasters }: { disasters: Disaster[] }) {
             const bounds = new google.maps.LatLngBounds();
             disasters.forEach(d => bounds.extend({lat: d.latitude, lng: d.longitude}));
             map.fitBounds(bounds, 100); // 100px padding
+        } else if (map) {
+            map.setCenter({ lat: 20, lng: 0 });
+            map.setZoom(2);
         }
     }, [map, disasters]);
 
@@ -82,14 +84,12 @@ function Markers({ disasters }: { disasters: Disaster[] }) {
 function Heatmap({ disasters }: { disasters: Disaster[] }) {
   const map = useMap();
   const heatmapData = useMemo(() => {
-    if (!disasters) return [];
     return disasters.map(d => new google.maps.LatLng(d.latitude, d.longitude));
   }, [disasters]);
 
   useEffect(() => {
     if (!map) return;
     
-    // Check if visualization library is available
     if (!google.maps.visualization) {
       console.error("Google Maps visualization library not loaded.");
       return;
@@ -111,44 +111,19 @@ function Heatmap({ disasters }: { disasters: Disaster[] }) {
   return null;
 }
 
-export function DisasterMap() {
+interface DisasterMapProps {
+    disasters: Disaster[];
+    isLoading: boolean;
+}
+
+export function DisasterMap({ disasters, isLoading }: DisasterMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const searchParams = useSearchParams();
-  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const typeFilter = searchParams.get('type');
-  const severityFilter = searchParams.get('severity');
-
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchDisasterData();
-        setAllDisasters(data);
-      } catch (error) {
-        console.error("Failed to fetch disaster data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const filteredDisasters = useMemo(() => {
-    return allDisasters.filter(disaster => {
-        const typeMatch = !typeFilter || disaster.type === typeFilter;
-        const severityMatch = !severityFilter || disaster.severity === severityFilter;
-        return typeMatch && severityMatch;
-    });
-  }, [allDisasters, typeFilter, severityFilter]);
-
-
+  
   if (!apiKey) {
     return (
       <div className="flex h-full min-h-[500px] w-full items-center justify-center rounded-lg bg-muted">
         <p className="text-center text-muted-foreground">
-          Google Maps API Key is missing. <br/> Please add it to your .env.local file.
+          Google Maps API Key is missing. <br/> Please add it to your .env file.
         </p>
       </div>
     );
@@ -175,8 +150,8 @@ export function DisasterMap() {
             { featureType: "water", stylers: [{ color: "hsl(var(--primary) / 0.2)" }] },
           ]}
         >
-          {filteredDisasters && <Markers disasters={filteredDisasters} />}
-          {filteredDisasters && <Heatmap disasters={filteredDisasters} />}
+          <Markers disasters={disasters} />
+          <Heatmap disasters={disasters} />
         </Map>
       </APIProvider>
     </div>

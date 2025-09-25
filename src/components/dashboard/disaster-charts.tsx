@@ -1,9 +1,8 @@
+
 "use client"
 
-import { useSearchParams } from "next/navigation";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
-import { useEffect, useState, useMemo } from "react";
-import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
+import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from "recharts"
+import { useMemo } from "react";
 
 import {
   Card,
@@ -19,40 +18,15 @@ import {
 } from "@/components/ui/chart"
 import type { Disaster } from "@/lib/data"
 
+interface DisasterChartsProps {
+  disasters: Disaster[];
+  isLoading: boolean;
+}
 
-export function DisasterCharts() {
-  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const searchParams = useSearchParams();
-  const typeFilter = searchParams.get('type');
-  const severityFilter = searchParams.get('severity');
-
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchDisasterData();
-        setAllDisasters(data);
-      } catch (error) {
-        console.error("Failed to fetch disaster data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const filteredDisasters = useMemo(() => {
-    return allDisasters.filter(disaster => {
-        const typeMatch = !typeFilter || disaster.type === typeFilter;
-        const severityMatch = !severityFilter || disaster.severity === severityFilter;
-        return typeMatch && severityMatch;
-    });
-  }, [allDisasters, typeFilter, severityFilter]);
-
-
+export function DisasterCharts({ disasters, isLoading }: DisasterChartsProps) {
+  
   const chartData = useMemo(() => {
-    return filteredDisasters.reduce((acc, disaster) => {
+    return disasters.reduce((acc, disaster) => {
       const existing = acc.find(d => d.type === disaster.type);
       if (existing) {
           existing.count += 1;
@@ -61,7 +35,7 @@ export function DisasterCharts() {
       }
       return acc;
     }, [] as { type: string, count: number }[]);
-  }, [filteredDisasters]);
+  }, [disasters]);
 
 
   return (
@@ -78,6 +52,7 @@ export function DisasterCharts() {
           },
         }} className="h-[250px] w-full">
            {isLoading ? <div className="flex h-full w-full items-center justify-center">Loading...</div> :
+           chartData.length > 0 ? (
             <BarChart
                 accessibilityLayer
                 data={chartData}
@@ -103,7 +78,12 @@ export function DisasterCharts() {
                 />
                 <Bar dataKey="count" fill="var(--color-count)" radius={4} />
             </BarChart>
-            }
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                No data to display.
+              </div>
+            )
+          }
         </ChartContainer>
       </CardContent>
     </Card>

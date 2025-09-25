@@ -1,5 +1,5 @@
+
 "use client";
-import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -8,52 +8,23 @@ import {
 } from "@/components/ui/card";
 import { Zap, Waves, Flame, Tornado } from "lucide-react";
 import type { Disaster } from "@/lib/data";
-import { useState, useEffect, useMemo } from "react";
-import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
+import { useMemo } from "react";
 
-export function StatsCards() {
-  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const searchParams = useSearchParams();
-  const typeFilter = searchParams.get('type');
-  const severityFilter = searchParams.get('severity');
+interface StatsCardsProps {
+  disasters: Disaster[];
+  isLoading: boolean;
+}
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchDisasterData();
-        setAllDisasters(data);
-      } catch (error) {
-        console.error("Failed to fetch disaster data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const filteredDisasters = useMemo(() => {
-    if (!allDisasters) return [];
-    return allDisasters.filter(disaster => {
-        const typeMatch = !typeFilter || disaster.type === typeFilter;
-        const severityMatch = !severityFilter || disaster.severity === severityFilter;
-        return typeMatch && severityMatch;
-    });
-  }, [allDisasters, typeFilter, severityFilter]);
-
-
+export function StatsCards({ disasters, isLoading }: StatsCardsProps) {
   const stats = useMemo(() => {
-    if (!filteredDisasters) return {};
-    return filteredDisasters.reduce((acc, disaster) => {
+    return disasters.reduce((acc, disaster) => {
         if (!acc[disaster.type]) {
           acc[disaster.type] = 0;
         }
         acc[disaster.type]++;
         return acc;
       }, {} as Record<string, number>)
-  }, [filteredDisasters]);
-
+  }, [disasters]);
 
   const StatCard = ({ title, icon, value }: { title: string; icon: React.ReactNode; value: number }) => (
     <Card>

@@ -1,9 +1,8 @@
+
 "use client"
 
-import { useSearchParams } from "next/navigation";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { useMemo, useState, useEffect } from "react";
-import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
+import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from "recharts"
+import { useMemo } from "react";
 
 import {
   Card,
@@ -19,40 +18,16 @@ import {
 } from "@/components/ui/chart"
 import type { Disaster } from "@/lib/data"
 
+interface TopLocationsChartProps {
+    disasters: Disaster[];
+    isLoading: boolean;
+}
 
-export function TopLocationsChart() {
-  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const searchParams = useSearchParams();
-  const typeFilter = searchParams.get('type');
-  const severityFilter = searchParams.get('severity');
-
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await fetchDisasterData();
-        setAllDisasters(data);
-      } catch (error) {
-        console.error("Failed to fetch disaster data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const filteredDisasters = useMemo(() => {
-    return allDisasters.filter(disaster => {
-        const typeMatch = !typeFilter || disaster.type === typeFilter;
-        const severityMatch = !severityFilter || disaster.severity === severityFilter;
-        return typeMatch && severityMatch;
-    });
-  }, [allDisasters, typeFilter, severityFilter]);
+export function TopLocationsChart({ disasters, isLoading }: TopLocationsChartProps) {
 
   const chartData = useMemo(() => {
     return Object.entries(
-        filteredDisasters.reduce((acc, disaster) => {
+        disasters.reduce((acc, disaster) => {
             // Simplify location name for better grouping
             const locationName = disaster.location.split(' - ')[0].split(',')[0];
             acc[locationName] = (acc[locationName] || 0) + 1;
@@ -62,7 +37,7 @@ export function TopLocationsChart() {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([location, count]) => ({ location, count }))
-  }, [filteredDisasters]);
+  }, [disasters]);
 
 
   return (
@@ -79,6 +54,7 @@ export function TopLocationsChart() {
           },
         }} className="h-[250px] w-full">
             {isLoading ? <div className="flex h-full w-full items-center justify-center">Loading...</div> :
+            chartData.length > 0 ? (
             <BarChart
                 layout="vertical"
                 accessibilityLayer
@@ -107,7 +83,12 @@ export function TopLocationsChart() {
                 />
                 <Bar dataKey="count" fill="var(--color-count)" radius={4} />
             </BarChart>
-            }
+            ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  No data to display.
+                </div>
+            )
+          }
         </ChartContainer>
       </CardContent>
     </Card>

@@ -6,8 +6,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import type { Disaster } from '@/lib/data';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
@@ -77,10 +75,10 @@ export default function AdminPage() {
             <TableBody>
               {isLoading && Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={5} className="p-4 text-center">Loading...</TableCell>
                 </TableRow>
               ))}
-              {!isLoading && disasters?.map((disaster) => (
+              {!isLoading && disasters.map((disaster) => (
                 <TableRow key={disaster.id}>
                   <TableCell>
                     <div className="font-medium">{disaster.location}</div>
@@ -97,6 +95,13 @@ export default function AdminPage() {
                   </TableCell>
                 </TableRow>
               ))}
+               {!isLoading && disasters.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        No active disasters to display.
+                    </TableCell>
+                </TableRow>
+            )}
             </TableBody>
           </Table>
         </CardContent>
