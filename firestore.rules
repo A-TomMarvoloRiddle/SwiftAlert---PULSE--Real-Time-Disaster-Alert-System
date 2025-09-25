@@ -1,0 +1,101 @@
+/**
+ * @fileoverview Firestore Security Rules for the PULSE disaster alert system.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles and alerts, while allowing open read access to disaster events.
+ *
+ * Data Structure:
+ * - User profiles are stored under `/users/{userId}`.
+ * - Alerts are stored under `/users/{userId}/alerts/{alertId}`.
+ * - Disaster events are stored under `/disasterEvents/{disasterEventId}`.
+ * - AI Insights are stored under `/disasterEvents/{disasterEventId}/insights/{insightId}`.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own profile data and alerts.
+ * - Disaster events are publicly readable.
+ * - Listing user profiles is disallowed.
+ *
+ * Denormalization for Authorization:
+ * - The `alerts` subcollection under each user profile denormalizes relevant information from the `DisasterEvent` to avoid `get()` calls.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces path-based ownership for user profiles.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user with UID 'user123' creates a profile at /users/user123 with user.id == 'user123'.
+     * @deny (create) - Authenticated user with UID 'user123' attempts to create a profile at /users/user456.
+     * @deny (update) - Authenticated user with UID 'user123' attempts to update the profile at /users/user456.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Enforces path-based ownership for alerts.
+     * @path /users/{userId}/alerts/{alertId}
+     * @allow (create) - Authenticated user with UID 'user123' creates an alert at /users/user123/alerts/alert789 with alert.userId == 'user123'.
+     * @deny (create) - Authenticated user with UID 'user123' attempts to create an alert at /users/user456/alerts/alert789.
+     * @deny (update) - Authenticated user with UID 'user123' attempts to update the alert at /users/user456/alerts/alert789.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId}/alerts/{alertId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Allows public read access to disaster events, with no write access granted to the client.
+     * @path /disasterEvents/{disasterEventId}
+     * @allow (get) - Any user can read any disaster event.
+     * @allow (list) - Any user can list disaster events.
+     * @deny (create) - Any user attempts to create a disaster event.
+     * @deny (update) - Any user attempts to update a disaster event.
+     * @principle Provides public read access with restricted writes.
+     */
+    match /disasterEvents/{disasterEventId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows public read access to AI insights with no write access granted to the client.
+     * @path /disasterEvents/{disasterEventId}/insights/{insightId}
+     * @allow (get) - Any user can read any insight.
+     * @allow (list) - Any user can list insights for a disaster event.
+     * @deny (create) - Any user attempts to create an insight.
+     * @deny (update) - Any user attempts to update an insight.
+     * @principle Provides public read access with restricted writes.
+     */
+    match /disasterEvents/{disasterEventId}/insights/{insightId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+  }
+}

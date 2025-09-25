@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile with their preferences and contact information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "location": {
+          "type": "string",
+          "description": "User's current location (e.g., city, region)."
+        },
+        "alertPreferences": {
+          "type": "array",
+          "description": "User's preferences for disaster alerts.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "location"
+      ]
+    },
+    "DisasterEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DisasterEvent",
+      "type": "object",
+      "description": "Represents a disaster event with its type, location, and severity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the disaster event."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of disaster (e.g., earthquake, flood, cyclone, wildfire)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Location of the disaster event (e.g., latitude, longitude)."
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity of the disaster event (e.g., low, medium, high)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the disaster event occurred.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "location",
+        "severity",
+        "timestamp"
+      ]
+    },
+    "Alert": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Alert",
+      "type": "object",
+      "description": "Represents an alert sent to a user regarding a disaster event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the alert."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Alert)"
+        },
+        "disasterEventId": {
+          "type": "string",
+          "description": "Reference to DisasterEvent. (Relationship: DisasterEvent 1:N Alert)"
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the alert message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the alert was sent.",
+          "format": "date-time"
+        },
+        "channel": {
+          "type": "string",
+          "description": "Channel used to send the alert (e.g., SMS, Email, Push)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "disasterEventId",
+        "message",
+        "timestamp",
+        "channel"
+      ]
+    },
+    "Insight": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Insight",
+      "type": "object",
+      "description": "Represents an AI-generated insight about a disaster event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the insight."
+        },
+        "disasterEventId": {
+          "type": "string",
+          "description": "Reference to DisasterEvent. (Relationship: DisasterEvent 1:N Insight)"
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the insight."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the insight was generated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "disasterEventId",
+        "content",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profiles. Path-based ownership ensures only the authenticated user can access their profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/alerts/{alertId}",
+        "definition": {
+          "entityName": "Alert",
+          "schema": {
+            "$ref": "#/backend/entities/Alert"
+          },
+          "description": "Stores alerts for each user. Includes denormalized disaster event data for authorization independence. The userId path parameter represents ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "alertId",
+              "description": "The unique identifier of the alert."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/disasterEvents/{disasterEventId}",
+        "definition": {
+          "entityName": "DisasterEvent",
+          "schema": {
+            "$ref": "#/backend/entities/DisasterEvent"
+          },
+          "description": "Stores information about disaster events.  Read access can be controlled via service accounts or admin roles.",
+          "params": [
+            {
+              "name": "disasterEventId",
+              "description": "The unique identifier of the disaster event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/disasterEvents/{disasterEventId}/insights/{insightId}",
+        "definition": {
+          "entityName": "Insight",
+          "schema": {
+            "$ref": "#/backend/entities/Insight"
+          },
+          "description": "Stores AI-generated insights for each disaster event.",
+          "params": [
+            {
+              "name": "disasterEventId",
+              "description": "The unique identifier of the disaster event."
+            },
+            {
+              "name": "insightId",
+              "description": "The unique identifier of the insight."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support a real-time disaster alert system (PULSE) with a focus on scalability, security, and real-time data processing. The structure leverages denormalization to achieve authorization independence, enabling secure and efficient data access. It incorporates structural segregation based on access patterns, and Access Modeling (Standardization and Consistency) is implemented via Path-Based Ownership, where appropriate, and via Membership Maps where shared authorization is required.\n\n**Authorization Independence (Denormalization):** The `alerts` subcollection under each user profile denormalizes relevant information from the `DisasterEvent` to avoid `get()` calls in security rules. Specifically, `alerts` will contain a copy of disaster event properties necessary for determining if the user should receive an alert (e.g., disaster `type`, `location`, `severity`). This allows security rules to be based solely on the data present in the `alert` document and the user's ID, eliminating hierarchical dependencies.\n\n**Structural Segregation:** User profiles are stored in a dedicated collection (`/users/{userId}`), ensuring consistent security requirements for all user-related data. Disaster events are stored in their own collection (`/disasterEvents`), which simplifies management and access control since all documents in this collection share the same basic security posture (e.g., read access potentially granted to specific service accounts or admin users).\n\n**Access Modeling:**\n*   **Private Data:** User profiles are accessed via path-based ownership (`/users/{userId}`), ensuring that only the authenticated user can access their profile data.  The `alerts` subcollection continues this pattern, ensuring that alerts are only accessible to their respective user.\n*   **Collaborative Data:** In this particular scenario, collaborative data is not explicitly present. Should the need arise, a Membership Map (members: {uid1: \"role\", uid2: \"role\"}) would be implemented in relevant documents or subcollections to manage access control for shared resources.\n\n**QAPs (Rules are not Filters):** The structure supports secure list operations. Listing alerts under `/users/{userId}/alerts` is secure because the alerts are directly associated with the user ID in the path. Listing disaster events from `/disasterEvents` can be secured using server-side filtering or by limiting access to specific service accounts, ensuring that users cannot filter based on unauthorized criteria. The AI insights can be also secured because it's located under `/disasterEvents/{disasterEventId}/insights` and therefore secured under the disaster event ID.\n\n**Invariants:** Ownership is enforced via path-based security rules for user profiles and alerts. Timestamps are managed within each document and can be validated via security rules to prevent tampering. Denormalized data in the `alerts` subcollection maintains integrity by ensuring that updates to disaster events are reflected in the relevant alerts through backend logic (e.g., Cloud Functions triggered on disaster event updates)."
+  }
+}
