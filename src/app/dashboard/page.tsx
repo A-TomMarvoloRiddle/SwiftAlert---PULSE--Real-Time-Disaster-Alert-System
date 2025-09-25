@@ -2,10 +2,16 @@ import { StatsCards } from '@/components/dashboard/stats-cards';
 import { DisasterMap } from '@/components/dashboard/disaster-map';
 import { AlertsFeed } from '@/components/dashboard/alerts-feed';
 import { DisasterCharts } from '@/components/dashboard/disaster-charts';
+import { TopLocationsChart } from '@/components/dashboard/top-locations-chart';
+import { DashboardFilters } from '@/components/dashboard/dashboard-filters';
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-4 md:gap-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <DashboardFilters />
+      </div>
       <StatsCards />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-5">
         <div className="lg:col-span-3">
@@ -14,6 +20,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 grid auto-rows-max items-start gap-4 md:gap-8">
           <AlertsFeed />
           <DisasterCharts />
+          <TopLocationsChart />
         </div>
       </div>
     </div>

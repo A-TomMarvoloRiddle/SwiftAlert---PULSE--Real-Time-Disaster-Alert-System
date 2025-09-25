@@ -1,6 +1,7 @@
 "use client";
 
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { useSearchParams } from 'next/navigation';
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, query, where, QueryConstraint } from "firebase/firestore";
+import { useEffect } from 'react';
 
 const severityConfig = {
   low: {
@@ -35,16 +37,73 @@ const severityConfig = {
   },
 };
 
+function Markers({ disasters }: { disasters: Disaster[] }) {
+    const map = useMap();
+    useEffect(() => {
+        if(map && disasters && disasters.length > 0) {
+            const bounds = new google.maps.LatLngBounds();
+            disasters.forEach(d => bounds.extend({lat: d.latitude, lng: d.longitude}));
+            map.fitBounds(bounds);
+        }
+    }, [map, disasters]);
+
+
+    return (
+        <>
+        {disasters.map((disaster) => {
+            const Icon = getDisasterIcon(disaster.type);
+            const config = severityConfig[disaster.severity];
+            
+            return (
+              <Tooltip key={disaster.id}>
+                <TooltipTrigger asChild>
+                  <AdvancedMarker
+                    position={{ lat: disaster.latitude, lng: disaster.longitude }}
+                  >
+                     <div className="relative">
+                      <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-card shadow-lg", config.bg)}>
+                          <Icon className={cn("h-4 w-4", config.icon)} />
+                      </div>
+                      <span className={cn("animate-ping absolute top-0 inline-flex h-full w-full rounded-full opacity-75", config.ping)}></span>
+                    </div>
+                  </AdvancedMarker>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-bold">{disaster.location}</p>
+                  <p className="capitalize">{disaster.type}</p>
+                  <p className="capitalize text-sm text-muted-foreground">{disaster.severity} severity</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </>
+    )
+}
+
 export function DisasterMap() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const firestore = useFirestore();
-  const disasterEventsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? collection(firestore, "disasterEvents")
-        : null,
-    [firestore]
-  );
+  const searchParams = useSearchParams();
+  const typeFilter = searchParams.get('type');
+  const severityFilter = searchParams.get('severity');
+
+  const disasterEventsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+
+    const constraints: QueryConstraint[] = [];
+    if (typeFilter) {
+      constraints.push(where('type', '==', typeFilter));
+    }
+    if (severityFilter) {
+      constraints.push(where('severity', '==', severityFilter));
+    }
+
+    if (constraints.length > 0) {
+        return query(collection(firestore, "disasterEvents"), ...constraints);
+    }
+    return collection(firestore, "disasterEvents");
+  }, [firestore, typeFilter, severityFilter]);
+
   const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
   if (!apiKey) {
@@ -77,32 +136,7 @@ export function DisasterMap() {
             { featureType: "water", stylers: [{ color: "hsl(var(--primary) / 0.2)" }] },
           ]}
         >
-          {disasters && disasters.map((disaster) => {
-            const Icon = getDisasterIcon(disaster.type);
-            const config = severityConfig[disaster.severity];
-            
-            return (
-              <Tooltip key={disaster.id}>
-                <TooltipTrigger asChild>
-                  <AdvancedMarker
-                    position={{ lat: disaster.latitude, lng: disaster.longitude }}
-                  >
-                     <div className="relative">
-                      <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-card shadow-lg", config.bg)}>
-                          <Icon className={cn("h-4 w-4", config.icon)} />
-                      </div>
-                      <span className={cn("animate-ping absolute top-0 inline-flex h-full w-full rounded-full opacity-75", config.ping)}></span>
-                    </div>
-                  </AdvancedMarker>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-bold">{disaster.location}</p>
-                  <p className="capitalize">{disaster.type}</p>
-                  <p className="capitalize text-sm text-muted-foreground">{disaster.severity} severity</p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {disasters && <Markers disasters={disasters} />}
         </Map>
       </APIProvider>
     </div>

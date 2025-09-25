@@ -20,7 +20,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, QueryConstraint } from "firebase/firestore";
 
 
-export function DisasterCharts() {
+export function TopLocationsChart() {
   const firestore = useFirestore();
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get('type');
@@ -46,32 +46,33 @@ export function DisasterCharts() {
   const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
   const chartData = disasters
-  ? disasters.reduce((acc, disaster) => {
-    const existing = acc.find(d => d.type === disaster.type);
-    if (existing) {
-        existing.count += 1;
-    } else {
-        acc.push({ type: disaster.type, count: 1 });
-    }
-    return acc;
-  }, [] as { type: string, count: number }[])
+  ? Object.entries(
+        disasters.reduce((acc, disaster) => {
+            acc[disaster.location] = (acc[disaster.location] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>)
+    )
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([location, count]) => ({ location, count }))
   : [];
 
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Disaster Trends</CardTitle>
-        <CardDescription>Count of active events by type.</CardDescription>
+        <CardTitle>Top 5 Affected Locations</CardTitle>
+        <CardDescription>Most frequent disaster locations.</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={{
           count: {
             label: "Count",
-            color: "hsl(var(--primary))",
+            color: "hsl(var(--accent))",
           },
         }} className="h-[250px] w-full">
             <BarChart
+                layout="vertical"
                 accessibilityLayer
                 data={chartData}
                 margin={{
@@ -81,15 +82,15 @@ export function DisasterCharts() {
                     left: 20,
                 }}
             >
-                <CartesianGrid vertical={false} />
-                <XAxis
-                    dataKey="type"
+                <CartesianGrid horizontal={false} />
+                <YAxis
+                    dataKey="location"
+                    type="category"
                     tickLine={false}
                     tickMargin={10}
                     axisLine={false}
-                    tickFormatter={(value) => value.slice(0, 3)}
                 />
-                <YAxis />
+                <XAxis dataKey="count" type="number" />
                 <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}

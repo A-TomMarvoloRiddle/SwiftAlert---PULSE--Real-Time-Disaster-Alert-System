@@ -1,5 +1,5 @@
 "use client";
-
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -9,17 +9,32 @@ import {
 import { Zap, Waves, Flame, Tornado } from "lucide-react";
 import type { Disaster } from "@/lib/data";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, query, where, QueryConstraint } from "firebase/firestore";
 
 export function StatsCards() {
   const firestore = useFirestore();
-  const disasterEventsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? collection(firestore, "disasterEvents")
-        : null,
-    [firestore]
-  );
+  const searchParams = useSearchParams();
+  const typeFilter = searchParams.get('type');
+  const severityFilter = searchParams.get('severity');
+
+  const disasterEventsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+
+    const constraints: QueryConstraint[] = [];
+    if (typeFilter) {
+      constraints.push(where('type', '==', typeFilter));
+    }
+    if (severityFilter) {
+      constraints.push(where('severity', '==', severityFilter));
+    }
+
+    if (constraints.length > 0) {
+        return query(collection(firestore, "disasterEvents"), ...constraints);
+    }
+    return collection(firestore, "disasterEvents");
+  }, [firestore, typeFilter, severityFilter]);
+
+
   const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
   const stats = disasters
