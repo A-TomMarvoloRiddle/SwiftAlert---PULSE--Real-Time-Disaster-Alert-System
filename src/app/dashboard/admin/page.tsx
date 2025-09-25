@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { SystemAnalytics } from '@/components/admin/system-analytics';
 
 const severityVariantMap = {
   low: "default",
@@ -77,18 +78,7 @@ export default function AdminPage() {
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
       <div className="grid gap-4 lg:grid-cols-2">
         <GenInsightForm />
-
-        <div className="grid gap-4">
-             <Card>
-                <CardHeader>
-                    <CardTitle>System Analytics</CardTitle>
-                    <CardDescription>Placeholder for detailed system analytics and charts.</CardDescription>
-                </CardHeader>
-                <CardContent className='flex items-center justify-center h-60 bg-muted rounded-b-lg'>
-                    <p className='text-muted-foreground'>Analytics charts coming soon.</p>
-                </CardContent>
-            </Card>
-        </div>
+        <SystemAnalytics disasters={disasters} isLoading={isLoading} />
       </div>
       
       <Card>
