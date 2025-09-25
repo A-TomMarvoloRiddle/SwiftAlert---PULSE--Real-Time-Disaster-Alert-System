@@ -91,30 +91,35 @@ const fetchDisasterDataFlow = ai.defineFlow(
 
     const disasters: Disaster[] = parsedData.data.events
       .map((event) => {
-        const categoryId = event.categories?.[0]?.id;
-        // Use the mapping, but default to 'cyclone' if no specific category matches
-        const disasterType = categoryId ? categoryToDisasterType[categoryId] || 'cyclone' : 'cyclone';
-        
-        // Use the mapping, but default to 'low' if no severity mapping exists
-        const severity = categoryId ? categoryToSeverity[categoryId] || 'low' : 'low'; 
-        
-        // Find the first geometry object that is a point.
-        const geometry = event.geometries.find(g => g && g.type === 'Point' && Array.isArray(g.coordinates));
-        if (!geometry) {
-          return null; // Skip events without a valid point location
-        }
+        try {
+            const categoryId = event.categories?.[0]?.id;
+            // Use the mapping, but default to 'cyclone' if no specific category matches
+            const disasterType = categoryId ? categoryToDisasterType[categoryId] || 'cyclone' : 'cyclone';
+            
+            // Use the mapping, but default to 'low' if no severity mapping exists
+            const severity = categoryId ? categoryToSeverity[categoryId] || 'low' : 'low'; 
+            
+            // Find the first geometry object that is a point.
+            const geometry = event.geometries.find(g => g && g.type === 'Point' && Array.isArray(g.coordinates) && g.coordinates.length >= 2);
+            if (!geometry) {
+              return null; // Skip events without a valid point location
+            }
 
-        return {
-          id: event.id,
-          type: disasterType,
-          location: event.title,
-          latitude: geometry.coordinates[1],
-          longitude: geometry.coordinates[0],
-          timestamp: geometry.date,
-          magnitude: undefined, // EONET doesn't consistently provide this
-          severity: severity,
-          details: event.description || 'No additional details available.',
-        };
+            return {
+              id: event.id,
+              type: disasterType,
+              location: event.title,
+              latitude: geometry.coordinates[1],
+              longitude: geometry.coordinates[0],
+              timestamp: geometry.date,
+              magnitude: undefined, // EONET doesn't consistently provide this
+              severity: severity,
+              details: event.description || 'No additional details available.',
+            };
+        } catch (e) {
+            console.error(`Failed to process event ${event.id}:`, e);
+            return null; // Skip this event if there's an error processing it
+        }
       })
       .filter((d): d is Disaster => d !== null);
 
