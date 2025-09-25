@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -16,6 +17,7 @@ import { Check, Star, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const safetyDrills = [
   {
@@ -26,6 +28,7 @@ const safetyDrills = [
       id: "earthquake-master",
       name: "Earthquake Master",
       icon: Shield,
+      colorClasses: "bg-amber-800/20 text-amber-700 dark:text-amber-600",
     },
   },
   {
@@ -36,6 +39,7 @@ const safetyDrills = [
       id: "fire-warden",
       name: "Fire Warden",
       icon: Shield,
+      colorClasses: "bg-red-500/20 text-red-600 dark:text-red-500",
     },
   },
   {
@@ -46,6 +50,7 @@ const safetyDrills = [
       id: "flood-navigator",
       name: "Flood Navigator",
       icon: Shield,
+      colorClasses: "bg-blue-500/20 text-blue-600 dark:text-blue-500",
     },
   },
 ];
@@ -122,8 +127,8 @@ export default function SafetyDrillsPage() {
                     const hasBadge = earnedBadgeIds.includes(badge.id);
                     const BadgeIcon = badge.icon;
                     return (
-                        <div key={badge.id} className={`flex flex-col items-center text-center p-4 rounded-lg w-32 ${hasBadge ? 'bg-accent/20' : 'bg-muted/50 opacity-50'}`}>
-                            <BadgeIcon className={`h-8 w-8 mb-2 ${hasBadge ? 'text-accent' : 'text-muted-foreground'}`} />
+                        <div key={badge.id} className={cn("flex flex-col items-center text-center p-4 rounded-lg w-32 transition-opacity", hasBadge ? badge.colorClasses : 'bg-muted/50 opacity-50')}>
+                            <BadgeIcon className={cn("h-8 w-8 mb-2", hasBadge ? 'text-inherit' : 'text-muted-foreground')} />
                             <p className="text-sm font-semibold">{badge.name}</p>
                         </div>
                     )
