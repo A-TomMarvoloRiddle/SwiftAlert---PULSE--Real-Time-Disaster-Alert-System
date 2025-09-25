@@ -31,6 +31,7 @@ import { PulseLogo } from '@/components/icons';
 import { DashboardNav } from '@/components/dashboard/dashboard-nav';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 function DashboardLayoutContent({ children }: { children: ReactNode }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
@@ -117,6 +118,7 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
               />
             </div>
             <div className="flex items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+               <ThemeToggle />
               <Button variant="outline" size="icon" className="h-8 w-8">
                 <Bell className="h-4 w-4" />
                 <span className="sr-only">Toggle notifications</span>
