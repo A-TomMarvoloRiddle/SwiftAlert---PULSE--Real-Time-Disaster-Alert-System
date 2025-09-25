@@ -1,3 +1,4 @@
+
 "use client";
 
 import { GenInsightForm } from '@/components/admin/gen-insight-form';
@@ -6,7 +7,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { Disaster } from '@/lib/data';
 import { format } from 'date-fns';
 import { seedDisasters } from '@/lib/seed';
@@ -37,22 +38,27 @@ export default function AdminPage() {
   async function handleSeedDatabase() {
     if (!firestore) return;
     setIsSeeding(true);
-    try {
-      await seedDisasters(firestore);
-      toast({
-        title: "Database Seeded",
-        description: "Sample disaster data has been added to Firestore.",
+    
+    seedDisasters(firestore)
+      .then(() => {
+        toast({
+          title: "Database Seeded",
+          description: "Sample disaster data has been added to Firestore.",
+        });
+      })
+      .catch((error) => {
+        // The contextual error is thrown globally by the FirebaseErrorListener.
+        // We only need to show a generic message to the user here.
+        toast({
+          variant: "destructive",
+          title: "Error Seeding Database",
+          description: "Could not add sample data. Check console for details.",
+        });
+        console.error("Seeding failed:", error); // Optional: log for local debugging
+      })
+      .finally(() => {
+        setIsSeeding(false);
       });
-    } catch (error) {
-      console.error("Error seeding database:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not seed the database.",
-      });
-    } finally {
-      setIsSeeding(false);
-    }
   }
 
   return (

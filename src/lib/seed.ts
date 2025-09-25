@@ -1,4 +1,7 @@
-import { collection, writeBatch, doc, Firestore } from 'firebase/firestore';
+
+import { collection, writeBatch, doc, Firestore, getDocs } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const disasterData = [
   {
@@ -98,16 +101,39 @@ const disasterData = [
   }
 ];
 
-export async function seedDisasters(db: Firestore) {
-  const batch = writeBatch(db);
+export async function seedDisasters(db: Firestore): Promise<void> {
   const disastersCollection = collection(db, 'disasterEvents');
+  const snapshot = await getDocs(disastersCollection);
+  if (!snapshot.empty) {
+    console.log("Database already seeded.");
+    return Promise.resolve();
+  }
 
-  disasterData.forEach((disaster, index) => {
-    // Generate a more unique ID
-    const docId = `seed-${Date.now()}-${index}`;
-    const docRef = doc(disastersCollection, docId);
+  const batch = writeBatch(db);
+  
+  disasterData.forEach((disaster) => {
+    // Use a simpler, deterministic ID for seed data
+    const docRef = doc(disastersCollection, `${disaster.location.replace(/, /g, '-')}-${disaster.type}`);
     batch.set(docRef, disaster);
   });
 
-  await batch.commit();
+  return batch.commit().catch(serverError => {
+    // The batch write is treated as a single 'write' operation.
+    // In a real scenario, you might not have the exact individual document that fails.
+    // Here, we provide a generic representation of the operation.
+    const permissionError = new FirestorePermissionError({
+      path: disastersCollection.path,
+      operation: 'write', // Batch writes are considered a 'write' operation
+      requestResourceData: {
+        message: "A batch write operation to seed the database was attempted.",
+        itemCount: disasterData.length,
+      }
+    });
+
+    // Emit the error for the global listener
+    errorEmitter.emit('permission-error', permissionError);
+
+    // Also reject the promise to allow the calling UI to handle the failed state.
+    return Promise.reject(permissionError);
+  });
 }
