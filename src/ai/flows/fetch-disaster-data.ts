@@ -16,7 +16,7 @@ const EonetEventSchema = z.object({
   id: z.string(),
   title: z.string(),
   link: z.string(),
-  description: z.string().nullable().optional(),
+  description: z.string().nullable(),
   categories: z.array(z.object({ id: z.string(), title: z.string() })),
   sources: z.array(z.object({ id: z.string(), url: z.string() })),
   geometries: z.array(
