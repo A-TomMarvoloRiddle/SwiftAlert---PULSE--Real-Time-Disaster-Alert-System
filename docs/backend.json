@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -9,6 +10,14 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the user profile."
+        },
+        "name": {
+            "type": "string",
+            "description": "User's first name."
+        },
+        "lastName": {
+            "type": "string",
+            "description": "User's last name."
         },
         "email": {
           "type": "string",

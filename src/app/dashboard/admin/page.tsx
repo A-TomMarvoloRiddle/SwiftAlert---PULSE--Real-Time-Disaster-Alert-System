@@ -11,6 +11,9 @@ import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 const severityVariantMap = {
   low: "default",
@@ -22,6 +25,9 @@ const severityVariantMap = {
 export default function AdminPage() {
   const [disasters, setDisasters] = useState<Disaster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
 
   useEffect(() => {
     async function loadData() {
@@ -31,7 +37,6 @@ export default function AdminPage() {
         setDisasters(data);
       } catch (error) {
         console.error("Failed to fetch disaster data", error);
-        // On error, ensure disasters is an empty array
         setDisasters([]);
       } finally {
         setIsLoading(false);
@@ -40,6 +45,33 @@ export default function AdminPage() {
     loadData();
   }, []);
 
+  const handleSendAlert = (disaster: Disaster) => {
+    if (!firestore || !user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to send alerts.",
+        });
+        return;
+    }
+
+    const alertsCollection = collection(firestore, `users/${user.uid}/alerts`);
+    const newAlert = {
+        userId: user.uid,
+        disasterEventId: disaster.id,
+        message: `New ${disaster.type} alert in ${disaster.location}. Severity: ${disaster.severity}.`,
+        timestamp: new Date().toISOString(),
+        channel: "dashboard", // Simulating a dashboard-triggered alert
+    };
+
+    // This is a non-blocking call
+    addDocumentNonBlocking(alertsCollection, newAlert);
+
+    toast({
+        title: "Alert Sent",
+        description: `An alert for the ${disaster.type} in ${disaster.location} has been created.`,
+    });
+  };
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
@@ -82,7 +114,7 @@ export default function AdminPage() {
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-28 ml-auto" /></TableCell>
                  </TableRow>
               ))}
               {!isLoading && disasters.map((disaster) => (
@@ -98,7 +130,7 @@ export default function AdminPage() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{format(new Date(disaster.timestamp), "yyyy-MM-dd")}</TableCell>
                   <TableCell className="text-right">
-                      <Button size="sm" variant="outline">Manage</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleSendAlert(disaster)}>Send Alert</Button>
                   </TableCell>
                 </TableRow>
               ))}
