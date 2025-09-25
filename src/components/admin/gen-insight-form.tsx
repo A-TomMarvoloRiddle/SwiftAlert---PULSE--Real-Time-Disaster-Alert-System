@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -54,7 +55,7 @@ export function GenInsightForm() {
     defaultValues: {
       disasterType: "",
       location: "",
-      magnitude: undefined,
+      magnitude: "" as any, // Initialize with an empty string to avoid uncontrolled input error
       additionalDetails: "",
     },
   });
