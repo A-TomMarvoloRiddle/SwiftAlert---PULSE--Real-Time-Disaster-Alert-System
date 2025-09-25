@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -96,18 +97,15 @@ const fetchDisasterDataFlow = ai.defineFlow(
       const disasters: Disaster[] = parsedData.data.events
         .map((event) => {
           const categoryId = event.categories[0]?.id;
-          const disasterType = categoryToDisasterType[categoryId];
+          // Use the mapping, but default to 'cyclone' if no specific category matches
+          const disasterType = categoryToDisasterType[categoryId] || 'cyclone';
           
-          // If the event category doesn't map to one of our types, skip it.
-          if (!disasterType) {
-            return null;
-          }
-          
-          const severity = categoryToSeverity[categoryId] || 'low'; // Default to 'low' if no mapping exists
+          // Use the mapping, but default to 'low' if no severity mapping exists
+          const severity = categoryToSeverity[categoryId] || 'low'; 
           
           const geometry = event.geometries.find(g => g.type === 'Point');
           if (!geometry) {
-            return null; // Skip events without a point location
+            return null; // Still skip events without a point location
           }
 
           return {
