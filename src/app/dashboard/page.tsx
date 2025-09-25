@@ -47,6 +47,10 @@ function DashboardPageContent() {
     });
   }, [allDisasters, typeFilter, severityFilter, isLoading]);
 
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
