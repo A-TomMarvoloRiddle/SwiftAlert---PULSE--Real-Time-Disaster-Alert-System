@@ -6,9 +6,12 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, writeBatch } from 'firebase/firestore';
 import type { Disaster } from '@/lib/data';
 import { format } from 'date-fns';
+import { seedDisasters } from '@/lib/seed';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 const severityVariantMap = {
   low: "default",
@@ -19,6 +22,9 @@ const severityVariantMap = {
 
 export default function AdminPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isSeeding, setIsSeeding] = useState(false);
+  
   const disasterEventsQuery = useMemoFirebase(
     () =>
       firestore
@@ -28,20 +34,57 @@ export default function AdminPage() {
   );
   const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
+  async function handleSeedDatabase() {
+    if (!firestore) return;
+    setIsSeeding(true);
+    try {
+      await seedDisasters(firestore);
+      toast({
+        title: "Database Seeded",
+        description: "Sample disaster data has been added to Firestore.",
+      });
+    } catch (error) {
+      console.error("Error seeding database:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not seed the database.",
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  }
+
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
       <div className="grid gap-4 lg:grid-cols-2">
         <GenInsightForm />
 
-        <Card>
-            <CardHeader>
-                <CardTitle>System Analytics</CardTitle>
-                <CardDescription>Placeholder for detailed system analytics and charts.</CardDescription>
-            </CardHeader>
-            <CardContent className='flex items-center justify-center h-80 bg-muted rounded-b-lg'>
-                <p className='text-muted-foreground'>Analytics charts coming soon.</p>
-            </CardContent>
-        </Card>
+        <div className="grid gap-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Database Tools</CardTitle>
+                    <CardDescription>Manage your Firestore database.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={handleSeedDatabase} disabled={isSeeding}>
+                      {isSeeding ? 'Seeding...' : 'Seed Database'}
+                    </Button>
+                    <p className="text-sm text-muted-foreground mt-2">
+                        Click to populate the database with sample disaster events.
+                    </p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>System Analytics</CardTitle>
+                    <CardDescription>Placeholder for detailed system analytics and charts.</CardDescription>
+                </CardHeader>
+                <CardContent className='flex items-center justify-center h-60 bg-muted rounded-b-lg'>
+                    <p className='text-muted-foreground'>Analytics charts coming soon.</p>
+                </CardContent>
+            </Card>
+        </div>
       </div>
       
       <Card>
