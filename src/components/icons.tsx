@@ -1,5 +1,5 @@
 import type { SVGProps } from "react";
-import { Waves, Flame, Tornado, Zap } from 'lucide-react';
+import { Waves, Flame, Tornado, Zap, Home, Hospital, ShieldCheck } from 'lucide-react';
 
 export const PulseLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -51,4 +51,14 @@ export const DisasterIcons = {
 
 export const getDisasterIcon = (type: keyof typeof DisasterIcons) => {
     return DisasterIcons[type] || Zap;
+}
+
+export const SafeZoneIcons = {
+    shelter: Home,
+    hospital: Hospital,
+    'emergency-center': ShieldCheck,
+};
+
+export const getSafeZoneIcon = (type: keyof typeof SafeZoneIcons) => {
+    return SafeZoneIcons[type] || Home;
 }

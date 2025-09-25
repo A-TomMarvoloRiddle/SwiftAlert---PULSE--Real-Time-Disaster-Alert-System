@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Settings, ShieldAlert } from "lucide-react";
+import { Home, Settings, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import {
   SidebarMenu,
@@ -13,6 +13,7 @@ import {
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
   { href: "/dashboard/admin", icon: ShieldAlert, label: "Admin Panel" },
+  { href: "/dashboard/safe-zones", icon: ShieldCheck, label: "Safe Zones" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
