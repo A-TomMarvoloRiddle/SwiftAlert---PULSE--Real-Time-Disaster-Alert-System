@@ -2,6 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { useEffect, useState, useMemo } from "react";
+import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
 
 import {
   Card,
@@ -16,46 +18,50 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import type { Disaster } from "@/lib/data"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, QueryConstraint } from "firebase/firestore";
 
 
 export function DisasterCharts() {
-  const firestore = useFirestore();
+  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get('type');
   const severityFilter = searchParams.get('severity');
 
-  const disasterEventsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-
-    const constraints: QueryConstraint[] = [];
-    if (typeFilter) {
-      constraints.push(where('type', '==', typeFilter));
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const data = await fetchDisasterData();
+        setAllDisasters(data);
+      } catch (error) {
+        console.error("Failed to fetch disaster data", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    if (severityFilter) {
-      constraints.push(where('severity', '==', severityFilter));
-    }
+    loadData();
+  }, []);
 
-    if (constraints.length > 0) {
-        return query(collection(firestore, "disasterEvents"), ...constraints);
-    }
-    return collection(firestore, "disasterEvents");
-  }, [firestore, typeFilter, severityFilter]);
+  const filteredDisasters = useMemo(() => {
+    return allDisasters.filter(disaster => {
+        const typeMatch = !typeFilter || disaster.type === typeFilter;
+        const severityMatch = !severityFilter || disaster.severity === severityFilter;
+        return typeMatch && severityMatch;
+    });
+  }, [allDisasters, typeFilter, severityFilter]);
 
-  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
-  const chartData = disasters
-  ? disasters.reduce((acc, disaster) => {
-    const existing = acc.find(d => d.type === disaster.type);
-    if (existing) {
-        existing.count += 1;
-    } else {
-        acc.push({ type: disaster.type, count: 1 });
-    }
-    return acc;
-  }, [] as { type: string, count: number }[])
-  : [];
+  const chartData = useMemo(() => {
+    return filteredDisasters.reduce((acc, disaster) => {
+      const existing = acc.find(d => d.type === disaster.type);
+      if (existing) {
+          existing.count += 1;
+      } else {
+          acc.push({ type: disaster.type, count: 1 });
+      }
+      return acc;
+    }, [] as { type: string, count: number }[]);
+  }, [filteredDisasters]);
 
 
   return (
@@ -71,6 +77,7 @@ export function DisasterCharts() {
             color: "hsl(var(--primary))",
           },
         }} className="h-[250px] w-full">
+           {isLoading ? <div className="flex h-full w-full items-center justify-center">Loading...</div> :
             <BarChart
                 accessibilityLayer
                 data={chartData}
@@ -89,13 +96,14 @@ export function DisasterCharts() {
                     axisLine={false}
                     tickFormatter={(value) => value.slice(0, 3)}
                 />
-                <YAxis />
+                <YAxis allowDecimals={false} />
                 <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}
                 />
                 <Bar dataKey="count" fill="var(--color-count)" radius={4} />
             </BarChart>
+            }
         </ChartContainer>
       </CardContent>
     </Card>

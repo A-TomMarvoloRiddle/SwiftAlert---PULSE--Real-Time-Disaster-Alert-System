@@ -1,7 +1,9 @@
 "use client"
 
 import { useSearchParams } from "next/navigation";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useMemo, useState, useEffect } from "react";
+import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
 
 import {
   Card,
@@ -16,53 +18,58 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import type { Disaster } from "@/lib/data"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, QueryConstraint } from "firebase/firestore";
 
 
 export function TopLocationsChart() {
-  const firestore = useFirestore();
+  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get('type');
   const severityFilter = searchParams.get('severity');
 
-  const disasterEventsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-
-    const constraints: QueryConstraint[] = [];
-    if (typeFilter) {
-      constraints.push(where('type', '==', typeFilter));
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const data = await fetchDisasterData();
+        setAllDisasters(data);
+      } catch (error) {
+        console.error("Failed to fetch disaster data", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    if (severityFilter) {
-      constraints.push(where('severity', '==', severityFilter));
-    }
+    loadData();
+  }, []);
 
-    if (constraints.length > 0) {
-        return query(collection(firestore, "disasterEvents"), ...constraints);
-    }
-    return collection(firestore, "disasterEvents");
-  }, [firestore, typeFilter, severityFilter]);
+  const filteredDisasters = useMemo(() => {
+    return allDisasters.filter(disaster => {
+        const typeMatch = !typeFilter || disaster.type === typeFilter;
+        const severityMatch = !severityFilter || disaster.severity === severityFilter;
+        return typeMatch && severityMatch;
+    });
+  }, [allDisasters, typeFilter, severityFilter]);
 
-  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
-
-  const chartData = disasters
-  ? Object.entries(
-        disasters.reduce((acc, disaster) => {
-            acc[disaster.location] = (acc[disaster.location] || 0) + 1;
+  const chartData = useMemo(() => {
+    return Object.entries(
+        filteredDisasters.reduce((acc, disaster) => {
+            // Simplify location name for better grouping
+            const locationName = disaster.location.split(' - ')[0].split(',')[0];
+            acc[locationName] = (acc[locationName] || 0) + 1;
             return acc;
         }, {} as Record<string, number>)
     )
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([location, count]) => ({ location, count }))
-  : [];
+  }, [filteredDisasters]);
 
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Top 5 Affected Locations</CardTitle>
-        <CardDescription>Most frequent disaster locations.</CardDescription>
+        <CardDescription>Most frequent disaster locations from live feed.</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={{
@@ -71,6 +78,7 @@ export function TopLocationsChart() {
             color: "hsl(var(--accent))",
           },
         }} className="h-[250px] w-full">
+            {isLoading ? <div className="flex h-full w-full items-center justify-center">Loading...</div> :
             <BarChart
                 layout="vertical"
                 accessibilityLayer
@@ -89,14 +97,17 @@ export function TopLocationsChart() {
                     tickLine={false}
                     tickMargin={10}
                     axisLine={false}
+                    width={80}
+                    tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
                 />
-                <XAxis dataKey="count" type="number" />
+                <XAxis dataKey="count" type="number" allowDecimals={false}/>
                 <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}
                 />
                 <Bar dataKey="count" fill="var(--color-count)" radius={4} />
             </BarChart>
+            }
         </ChartContainer>
       </CardContent>
     </Card>

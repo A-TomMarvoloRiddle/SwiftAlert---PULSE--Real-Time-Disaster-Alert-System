@@ -10,9 +10,8 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Disaster } from '@/lib/data';
 import { format } from 'date-fns';
-import { seedDisasters } from '@/lib/seed';
-import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 
 const severityVariantMap = {
   low: "default",
@@ -22,44 +21,24 @@ const severityVariantMap = {
 } as const;
 
 export default function AdminPage() {
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [isSeeding, setIsSeeding] = useState(false);
-  
-  const disasterEventsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? collection(firestore, "disasterEvents")
-        : null,
-    [firestore]
-  );
-  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
+  const [disasters, setDisasters] = useState<Disaster[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  async function handleSeedDatabase() {
-    if (!firestore) return;
-    setIsSeeding(true);
-    
-    seedDisasters(firestore)
-      .then(() => {
-        toast({
-          title: "Database Seeded",
-          description: "Sample disaster data has been added to Firestore.",
-        });
-      })
-      .catch((error) => {
-        // The contextual error is thrown globally by the FirebaseErrorListener.
-        // We only need to show a generic message to the user here.
-        toast({
-          variant: "destructive",
-          title: "Error Seeding Database",
-          description: "Could not add sample data. Check console for details.",
-        });
-        console.error("Seeding failed:", error); // Optional: log for local debugging
-      })
-      .finally(() => {
-        setIsSeeding(false);
-      });
-  }
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const data = await fetchDisasterData();
+        setDisasters(data);
+      } catch (error) {
+        console.error("Failed to fetch disaster data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
@@ -67,20 +46,6 @@ export default function AdminPage() {
         <GenInsightForm />
 
         <div className="grid gap-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Database Tools</CardTitle>
-                    <CardDescription>Manage your Firestore database.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button onClick={handleSeedDatabase} disabled={isSeeding}>
-                      {isSeeding ? 'Seeding...' : 'Seed Database'}
-                    </Button>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        Click to populate the database with sample disaster events.
-                    </p>
-                </CardContent>
-            </Card>
              <Card>
                 <CardHeader>
                     <CardTitle>System Analytics</CardTitle>
@@ -96,7 +61,7 @@ export default function AdminPage() {
       <Card>
         <CardHeader className="px-7">
           <CardTitle>Manage Alerts</CardTitle>
-          <CardDescription>Review, edit, or manually issue disaster alerts.</CardDescription>
+          <CardDescription>Review, edit, or manually issue disaster alerts from the live feed.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -110,7 +75,12 @@ export default function AdminPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {disasters?.map((disaster) => (
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && disasters?.map((disaster) => (
                 <TableRow key={disaster.id}>
                   <TableCell>
                     <div className="font-medium">{disaster.location}</div>

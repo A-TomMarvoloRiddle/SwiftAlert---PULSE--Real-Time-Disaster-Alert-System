@@ -12,9 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
+import { useEffect, useState } from "react";
+import { fetchDisasterData } from "@/ai/flows/fetch-disaster-data";
 
 const severityVariantMap = {
   low: "default",
@@ -24,15 +24,25 @@ const severityVariantMap = {
 } as const;
 
 export function AlertsFeed() {
-  const firestore = useFirestore();
-  const disasterEventsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, "disasterEvents"), orderBy("timestamp", "desc"))
-        : null,
-    [firestore]
-  );
-  const { data: disasters, isLoading } = useCollection<Disaster>(disasterEventsQuery);
+  const [disasters, setDisasters] = useState<Disaster[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const data = await fetchDisasterData();
+        // Sort by most recent
+        const sortedData = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setDisasters(sortedData);
+      } catch (error) {
+        console.error("Failed to fetch disaster data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   return (
     <Card>
@@ -82,7 +92,7 @@ export function AlertsFeed() {
                         {formatDistanceToNow(new Date(disaster.timestamp), { addSuffix: true })}
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{disaster.details}</p>
+                    <p className="text-sm text-muted-foreground truncate">{disaster.details}</p>
                     <div className="mt-1">
                       <Badge variant={severityVariantMap[disaster.severity]} className="capitalize">{disaster.severity}</Badge>
                     </div>

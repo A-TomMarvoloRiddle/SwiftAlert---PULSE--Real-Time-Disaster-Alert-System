@@ -10,9 +10,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, QueryConstraint } from "firebase/firestore";
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 
 const severityConfig = {
   low: {
@@ -43,7 +42,7 @@ function Markers({ disasters }: { disasters: Disaster[] }) {
         if(map && disasters && disasters.length > 0) {
             const bounds = new google.maps.LatLngBounds();
             disasters.forEach(d => bounds.extend({lat: d.latitude, lng: d.longitude}));
-            map.fitBounds(bounds);
+            map.fitBounds(bounds, 100); // 100px padding
         }
     }, [map, disasters]);
 
@@ -101,7 +100,8 @@ function Heatmap({ disasters }: { disasters: Disaster[] }) {
       map: map,
     });
     
-    heatmap.set('radius', 20);
+    heatmap.set('radius', 30);
+    heatmap.set('opacity', 0.6);
 
     return () => {
       heatmap.setMap(null);
@@ -113,29 +113,36 @@ function Heatmap({ disasters }: { disasters: Disaster[] }) {
 
 export function DisasterMap() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const firestore = useFirestore();
   const searchParams = useSearchParams();
+  const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const typeFilter = searchParams.get('type');
   const severityFilter = searchParams.get('severity');
 
-  const disasterEventsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-
-    const constraints: QueryConstraint[] = [];
-    if (typeFilter) {
-      constraints.push(where('type', '==', typeFilter));
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const data = await fetchDisasterData();
+        setAllDisasters(data);
+      } catch (error) {
+        console.error("Failed to fetch disaster data", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    if (severityFilter) {
-      constraints.push(where('severity', '==', severityFilter));
-    }
+    loadData();
+  }, []);
 
-    if (constraints.length > 0) {
-        return query(collection(firestore, "disasterEvents"), ...constraints);
-    }
-    return collection(firestore, "disasterEvents");
-  }, [firestore, typeFilter, severityFilter]);
+  const filteredDisasters = useMemo(() => {
+    return allDisasters.filter(disaster => {
+        const typeMatch = !typeFilter || disaster.type === typeFilter;
+        const severityMatch = !severityFilter || disaster.severity === severityFilter;
+        return typeMatch && severityMatch;
+    });
+  }, [allDisasters, typeFilter, severityFilter]);
 
-  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
   if (!apiKey) {
     return (
@@ -151,6 +158,7 @@ export function DisasterMap() {
 
   return (
     <div className="h-full min-h-[500px] w-full overflow-hidden rounded-lg border">
+       {isLoading && <div className="flex h-full w-full items-center justify-center bg-muted"><p>Loading Map Data...</p></div>}
       <APIProvider apiKey={apiKey} libraries={['visualization']}>
         <Map
           defaultCenter={center}
@@ -167,8 +175,8 @@ export function DisasterMap() {
             { featureType: "water", stylers: [{ color: "hsl(var(--primary) / 0.2)" }] },
           ]}
         >
-          {disasters && <Markers disasters={disasters} />}
-          {disasters && <Heatmap disasters={disasters} />}
+          {filteredDisasters && <Markers disasters={filteredDisasters} />}
+          {filteredDisasters && <Heatmap disasters={filteredDisasters} />}
         </Map>
       </APIProvider>
     </div>
