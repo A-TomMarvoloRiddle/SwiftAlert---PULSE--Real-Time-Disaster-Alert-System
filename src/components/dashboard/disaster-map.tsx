@@ -14,14 +14,14 @@ import { useEffect, useMemo } from 'react';
 
 const severityConfig = {
   low: {
+    bg: "bg-primary",
+    icon: "text-primary-foreground",
+    ping: "bg-primary/80"
+  },
+  medium: {
     bg: "bg-secondary",
     icon: "text-secondary-foreground",
     ping: "bg-gray-400",
-  },
-  medium: {
-    bg: "bg-primary/80",
-    icon: "text-primary-foreground",
-    ping: "bg-primary/80"
   },
   high: {
     bg: "bg-accent",

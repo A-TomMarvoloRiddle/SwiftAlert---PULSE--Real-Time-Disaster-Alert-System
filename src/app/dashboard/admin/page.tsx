@@ -18,8 +18,8 @@ import { SystemAnalytics } from '@/components/admin/system-analytics';
 
 const severityVariantMap = {
   low: "default",
-  medium: "default",
-  high: "secondary",
+  medium: "secondary",
+  high: "default",
   critical: "destructive",
 } as const;
 

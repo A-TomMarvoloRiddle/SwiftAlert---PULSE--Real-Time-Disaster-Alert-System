@@ -26,8 +26,8 @@ interface SystemAnalyticsProps {
 
 const severityColors = {
     low: "hsl(var(--chart-1))",
-    medium: "hsl(var(--chart-2))",
-    high: "hsl(var(--chart-3))",
+    medium: "hsl(var(--chart-3))",
+    high: "hsl(var(--chart-2))",
     critical: "hsl(var(--chart-4))",
 };
 

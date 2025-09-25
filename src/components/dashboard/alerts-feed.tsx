@@ -18,8 +18,8 @@ import { useMemo } from "react";
 
 const severityVariantMap = {
   low: "default",
-  medium: "default",
-  high: "secondary",
+  medium: "secondary",
+  high: "default",
   critical: "destructive",
 } as const;
 
