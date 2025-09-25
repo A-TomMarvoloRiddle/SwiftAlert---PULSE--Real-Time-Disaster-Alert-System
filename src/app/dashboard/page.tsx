@@ -12,7 +12,6 @@ import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 import type { Disaster } from '@/lib/data';
 import { useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PredictDisasterForm } from '@/components/admin/predict-disaster-form';
 
 function DashboardPageContent() {
   const [allDisasters, setAllDisasters] = useState<Disaster[]>([]);
@@ -64,7 +63,6 @@ function DashboardPageContent() {
           <DisasterMap disasters={filteredDisasters} isLoading={isLoading} />
         </div>
         <div className="lg:col-span-2 grid auto-rows-max items-start gap-4 md:gap-8">
-          <PredictDisasterForm />
           <AlertsFeed disasters={filteredDisasters} isLoading={isLoading} />
           <DisasterCharts disasters={filteredDisasters} isLoading={isLoading} />
           <TopLocationsChart disasters={filteredDisasters} isLoading={isLoading} />
