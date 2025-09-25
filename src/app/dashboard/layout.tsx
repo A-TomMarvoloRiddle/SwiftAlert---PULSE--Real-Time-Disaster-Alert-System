@@ -109,7 +109,7 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
             <Link href="/dashboard" className="flex items-center gap-2">
               <PulseLogo className="size-7 text-primary transition-all group-data-[collapsible=icon]:size-8" />
               <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">
-                PULSE
+                SwiftAlert
               </span>
             </Link>
           </SidebarHeader>

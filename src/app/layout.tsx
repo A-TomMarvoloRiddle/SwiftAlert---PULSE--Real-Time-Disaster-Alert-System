@@ -5,7 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'PULSE: Real-Time Disaster Alert System',
+  title: 'SwiftAlert: Real-Time Disaster Alert System',
   description: 'A cloud-native, serverless, real-time disaster alert system.',
 };
 
