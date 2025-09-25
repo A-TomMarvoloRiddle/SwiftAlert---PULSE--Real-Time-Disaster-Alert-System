@@ -1,9 +1,9 @@
 
 "use client";
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Siren } from 'lucide-react';
 import { FirebaseClientProvider, useAuth, useUser } from '@/firebase/client-provider';
 import { useRouter } from 'next/navigation';
 
@@ -26,24 +26,66 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PulseLogo } from '@/components/icons';
 import { DashboardNav } from '@/components/dashboard/dashboard-nav';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useToast } from '@/hooks/use-toast';
 
 function DashboardLayoutContent({ children }: { children: ReactNode }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [isUserLoading, user, router]);
+
+  const handlePanicClick = () => {
+    if (!navigator.geolocation) {
+      toast({
+        variant: "destructive",
+        title: "Geolocation Not Supported",
+        description: "Your browser does not support location services.",
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        toast({
+          title: "Emergency Alert Sent",
+          description: `Alert with your location (${latitude.toFixed(4)}, ${longitude.toFixed(4)}) sent to emergency contacts.`,
+        });
+        // In a real app, you would send this data to a server/service.
+      },
+      (error) => {
+        toast({
+          variant: "destructive",
+          title: "Location Error",
+          description: "Could not retrieve your location. Please ensure location services are enabled.",
+        });
+      }
+    );
+  };
 
   if (isUserLoading || !user) {
     return (
@@ -123,6 +165,26 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
                 <Bell className="h-4 w-4" />
                 <span className="sr-only">Toggle notifications</span>
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon" className="h-8 w-8">
+                        <Siren className="h-4 w-4" />
+                        <span className="sr-only">Panic Button</span>
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will immediately send your current location to your emergency contacts and local authorities. Use only in a genuine emergency.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handlePanicClick}>Confirm & Send Alert</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+               </AlertDialog>
             </div>
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
