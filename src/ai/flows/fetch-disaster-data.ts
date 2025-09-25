@@ -36,19 +36,37 @@ const EonetResponseSchema = z.object({
 
 // Mapping from EONET category IDs to our app's disaster types
 const categoryToDisasterType: Record<string, Disaster['type']> = {
-  wildfires: 'wildfire',
-  floods: 'flood',
-  earthquakes: 'earthquake',
-  severeStorms: 'cyclone', // Using cyclone for severe storms
+    drought: 'wildfire', // Categorizing drought as related to wildfire risk
+    dustAndHaze: 'cyclone', // Generic category
+    earthquakes: 'earthquake',
+    floods: 'flood',
+    landslides: 'earthquake', // Related to seismic/ground activity
+    manmade: 'cyclone', // Generic category
+    seaAndLakeIce: 'flood', // Related to water levels
+    severeStorms: 'cyclone',
+    snow: 'flood', // Potential for melting
+    tempExtremes: 'wildfire', // Related to heat
+    volcanoes: 'wildfire', // Related to heat/fire
+    waterColor: 'flood', // Water-related event
+    wildfires: 'wildfire',
 };
 
 // Mapping from EONET category IDs to our app's disaster severity
 const categoryToSeverity: Record<string, Disaster['severity']> = {
-    wildfires: 'high',
-    floods: 'medium',
+    drought: 'medium',
+    dustAndHaze: 'low',
     earthquakes: 'high',
+    floods: 'high',
+    landslides: 'medium',
+    manmade: 'low',
+    seaAndLakeIce: 'low',
     severeStorms: 'critical',
-  };
+    snow: 'medium',
+    tempExtremes: 'high',
+    volcanoes: 'critical',
+    waterColor: 'low',
+    wildfires: 'high',
+};
 
 export async function fetchDisasterData(): Promise<Disaster[]> {
   return fetchDisasterDataFlow();
@@ -77,12 +95,15 @@ const fetchDisasterDataFlow = ai.defineFlow(
 
       const disasters: Disaster[] = parsedData.data.events
         .map((event) => {
-          const disasterType = categoryToDisasterType[event.categories[0]?.id];
-          const severity = categoryToSeverity[event.categories[0]?.id] || 'low';
+          const categoryId = event.categories[0]?.id;
+          const disasterType = categoryToDisasterType[categoryId];
           
+          // If the event category doesn't map to one of our types, skip it.
           if (!disasterType) {
-            return null; // Skip events that don't map to our types
+            return null;
           }
+          
+          const severity = categoryToSeverity[categoryId] || 'low'; // Default to 'low' if no mapping exists
           
           const geometry = event.geometries.find(g => g.type === 'Point');
           if (!geometry) {
