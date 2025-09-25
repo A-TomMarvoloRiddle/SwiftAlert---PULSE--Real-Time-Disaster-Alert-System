@@ -1,110 +1,112 @@
 /**
- * @fileOverview Firestore Security Rules for the PULSE disaster alert system.
+ * @fileoverview Firestore Security Rules for PULSE - Real-time Disaster Alert System.
  *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and alerts, while allowing broader access to disaster event data.
+ * Core Philosophy: This ruleset enforces a strict user-ownership model for user profiles and alerts, 
+ * while allowing broader read access to disaster events and insights.  Write access is restricted 
+ * based on ownership or, potentially, administrative roles (not yet implemented). Data shape is not strictly enforced in this prototype.
  *
  * Data Structure:
- * - /users/{userId}: User profile data, accessible only to the owning user.
- * - /users/{userId}/alerts/{alertId}: Alerts specific to a user, accessible only to that user.
- * - /disasterEvents/{disasterEventId}: Disaster event data, potentially accessible to service accounts or admin roles for seeding or broader access.
- * - /disasterEvents/{disasterEventId}/insights/{insightId}: Insights related to disaster events, implicitly secured by the disaster event's permissions.
+ * - /users/{userId}:  User profile data, accessible only by the user themselves.
+ * - /users/{userId}/alerts/{alertId}: Alerts for a specific user, accessible only by that user.
+ * - /disasterEvents/{disasterEventId}: Disaster event data, potentially publicly readable (or readable by service accounts). Write access is restricted.
+ * - /disasterEvents/{disasterEventId}/insights/{insightId}: Insights related to disaster events, potentially publicly readable (or readable by service accounts). Write access is restricted.
  *
  * Key Security Decisions:
- * - User profiles and alerts are strictly owned and controlled by the authenticated user.
- * - Disaster events are secured to prevent unauthorized client-side writes, with potential for service account or admin access.
- * - Listing of all users is explicitly disallowed for privacy.
- * - The system utilizes path-based ownership for user data and relies on backend logic (e.g., Cloud Functions) to maintain data integrity across denormalized data.
+ * - User listing is disallowed to protect privacy.
+ * - Alerts are stored as a subcollection of users, enforcing ownership.
+ * - Disaster events are potentially world readable, insights are also potentially world readable but write access is restricted.
  *
- * Denormalization for Authorization:
- * - Alert documents under /users/{userId}/alerts contain denormalized data from DisasterEvent documents to avoid costly `get()` calls and enable authorization based solely on the alert document and the user's ID.
+ * Denormalization for Authorization:  Alert documents under /users/{userId}/alerts/{alertId} contain copies of relevant DisasterEvent data. This avoids requiring `get()` calls to the /disasterEvents collection in the security rules, improving performance and preventing rule evaluation errors.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
-     * @returns {boolean} True if the request is authenticated, false otherwise.
+     * @description Checks if the request is made by a signed-in user.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the authenticated user is the owner of the resource.
-     * @param {string} userId - The user ID to compare against the authenticated user's ID.
-     * @returns {boolean} True if the user ID matches the authenticated user's ID, false otherwise.
+     * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId - The user ID to compare against.
      */
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the authenticated user is the owner of the resource and the resource exists.
-     * @param {string} userId - The user ID to compare against the authenticated user's ID.
-     * @returns {boolean} True if the user ID matches the authenticated user's ID and the resource exists, false otherwise.
+     * @description Checks if the authenticated user is the owner of an existing document.
+     * @param {string} userId - The user ID to compare against.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isOwner(userId) && exists(resource);
     }
 
     /**
-     * @description Security rules for user profiles.
+     * @description Rules for user profiles.
      * @path /users/{userId}
-     * @allow (create) Authenticated user creates their own profile with matching userId.
-     * @allow (get, update, delete) Authenticated user accesses/modifies their own profile.
-     * @deny (create) Authenticated user attempts to create a profile for another user.
-     * @deny (get, update, delete) Authenticated user attempts to access/modify another user's profile.
-     * @principle Enforces document ownership for all operations on user profiles.
+     * @allow (create) - Authenticated user creates their own profile with matching userId.
+     * @allow (get, update, delete) - Authenticated user accesses their own profile.
+     * @deny (create) - Authenticated user tries to create a profile with a mismatched userId.
+     * @deny (get, update, delete) - Authenticated user tries to access another user's profile.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow list: if false; // Disallow listing of all users for privacy.
+      allow create: if isOwner(userId) && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Security rules for alerts under a user profile.
+     * @description Rules for alerts within a user's profile.
      * @path /users/{userId}/alerts/{alertId}
-     * @allow (create) Authenticated user creates an alert under their profile.
-     * @allow (get, update, delete) Authenticated user accesses/modifies their own alerts.
-     * @deny (create) Authenticated user attempts to create an alert under another user's profile.
-     * @deny (get, update, delete) Authenticated user attempts to access/modify alerts under another user's profile.
-     * @principle Enforces document ownership for all operations on user alerts.
+     * @allow (create) - Authenticated user creates an alert under their own profile.
+     * @allow (get, update, delete) - Authenticated user accesses/modifies alerts under their own profile.
+     * @deny (create) - Authenticated user tries to create an alert under another user's profile.
+     * @deny (get, update, delete) - Authenticated user tries to access/modify alerts under another user's profile.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/alerts/{alertId} {
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Security rules for disaster events.
+     * @description Rules for disaster events.
      * @path /disasterEvents/{disasterEventId}
-     * @allow (get, list) Public read access to disaster events.
-     * @deny (create, update, delete) Prevents unauthorized modification of disaster events.
-     * @principle Allows public read access but restricts write access to prevent unauthorized changes.
+     * @allow (get, list) - Anyone can read disaster event data.
+     * @deny (create, update, delete) - Only authorized users/services can modify disaster event data.
+     * @principle Allows public read access but restricts write access.
      */
     match /disasterEvents/{disasterEventId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add service account or admin role check if needed.
+      allow get: if true;
+      allow list: if true;
+      allow create: if false; // TODO: Add role-based authorization.
+      allow update: if false; // TODO: Add role-based authorization.
+      allow delete: if false; // TODO: Add role-based authorization.
     }
 
     /**
-     * @description Security rules for AI-generated insights related to disaster events.
+     * @description Rules for AI-generated insights related to disaster events.
      * @path /disasterEvents/{disasterEventId}/insights/{insightId}
-     * @allow (get, list) Public read access to insights.
-     * @deny (create, update, delete) Prevents unauthorized modification of insights.
-     * @principle Inherits security from the parent disaster event; write access is restricted.
+     * @allow (get, list) - Anyone can read AI-generated insights data.
+     * @deny (create, update, delete) - Only authorized users/services can modify AI-generated insights data.
+     * @principle Allows public read access but restricts write access.
      */
     match /disasterEvents/{disasterEventId}/insights/{insightId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add service account or admin role check if needed.
+      allow get: if true;
+      allow list: if true;
+      allow create: if false; // TODO: Add role-based authorization.
+      allow update: if false; // TODO: Add role-based authorization.
+      allow delete: if false; // TODO: Add role-based authorization.
     }
   }
 }
