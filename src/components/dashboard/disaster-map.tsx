@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, QueryConstraint } from "firebase/firestore";
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 const severityConfig = {
   low: {
@@ -80,6 +80,37 @@ function Markers({ disasters }: { disasters: Disaster[] }) {
     )
 }
 
+function Heatmap({ disasters }: { disasters: Disaster[] }) {
+  const map = useMap();
+  const heatmapData = useMemo(() => {
+    if (!disasters) return [];
+    return disasters.map(d => new google.maps.LatLng(d.latitude, d.longitude));
+  }, [disasters]);
+
+  useEffect(() => {
+    if (!map) return;
+    
+    // Check if visualization library is available
+    if (!google.maps.visualization) {
+      console.error("Google Maps visualization library not loaded.");
+      return;
+    }
+
+    const heatmap = new google.maps.visualization.HeatmapLayer({
+      data: heatmapData,
+      map: map,
+    });
+    
+    heatmap.set('radius', 20);
+
+    return () => {
+      heatmap.setMap(null);
+    };
+  }, [map, heatmapData]);
+
+  return null;
+}
+
 export function DisasterMap() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const firestore = useFirestore();
@@ -120,7 +151,7 @@ export function DisasterMap() {
 
   return (
     <div className="h-full min-h-[500px] w-full overflow-hidden rounded-lg border">
-      <APIProvider apiKey={apiKey}>
+      <APIProvider apiKey={apiKey} libraries={['visualization']}>
         <Map
           defaultCenter={center}
           defaultZoom={2}
@@ -137,6 +168,7 @@ export function DisasterMap() {
           ]}
         >
           {disasters && <Markers disasters={disasters} />}
+          {disasters && <Heatmap disasters={disasters} />}
         </Map>
       </APIProvider>
     </div>
