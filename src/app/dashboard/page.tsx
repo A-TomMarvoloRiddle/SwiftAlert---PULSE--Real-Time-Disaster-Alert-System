@@ -7,7 +7,7 @@ import { AlertsFeed } from '@/components/dashboard/alerts-feed';
 import { DisasterCharts } from '@/components/dashboard/disaster-charts';
 import { TopLocationsChart } from '@/components/dashboard/top-locations-chart';
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
 import type { Disaster } from '@/lib/data';
 import { useSearchParams } from 'next/navigation';
@@ -29,6 +29,8 @@ function DashboardPageContent() {
         setAllDisasters(data);
       } catch (error) {
         console.error("Failed to fetch disaster data", error);
+        // Keep the disasters array empty on error
+        setAllDisasters([]);
       } finally {
         setIsLoading(false);
       }
@@ -39,8 +41,8 @@ function DashboardPageContent() {
   const filteredDisasters = useMemo(() => {
     if (isLoading) return [];
     return allDisasters.filter(disaster => {
-        const typeMatch = !typeFilter || disaster.type === typeFilter;
-        const severityMatch = !severityFilter || disaster.severity === severityFilter;
+        const typeMatch = !typeFilter || typeFilter === 'all' || disaster.type === typeFilter;
+        const severityMatch = !severityFilter || severityFilter === 'all' || disaster.severity === severityFilter;
         return typeMatch && severityMatch;
     });
   }, [allDisasters, typeFilter, severityFilter, isLoading]);
@@ -69,8 +71,39 @@ function DashboardPageContent() {
 
 export default function DashboardPage() {
   return (
-    // Use a suspense boundary if you want to show a loading state for the whole page
-    // For now, we let each component handle its loading state.
-    <DashboardPageContent />
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardPageContent />
+    </Suspense>
   )
+}
+
+
+function DashboardSkeleton() {
+    return (
+      <div className="flex flex-col gap-4 md:gap-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <Skeleton className="h-8 w-36" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-[180px]" />
+            <Skeleton className="h-10 w-[180px]" />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+        </div>
+        <div className="grid gap-4 md:gap-8 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+             <Skeleton className="h-full min-h-[500px] w-full" />
+          </div>
+          <div className="lg:col-span-2 grid auto-rows-max items-start gap-4 md:gap-8">
+            <Skeleton className="h-80" />
+            <Skeleton className="h-80" />
+            <Skeleton className="h-80" />
+          </div>
+        </div>
+      </div>
+    )
 }
