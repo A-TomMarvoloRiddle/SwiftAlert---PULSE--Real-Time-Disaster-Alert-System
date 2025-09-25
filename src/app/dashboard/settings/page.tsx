@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -10,6 +11,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 
 export default function SettingsPage() {
@@ -107,6 +109,38 @@ export default function SettingsPage() {
           <Button>Save Changes</Button>
         </CardFooter>
       </Card>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>Language</CardTitle>
+          <CardDescription>
+            Choose your preferred language for notifications.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form>
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="language">Language</Label>
+              <Select>
+                <SelectTrigger id="language">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="ja">Japanese</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </form>
+        </CardContent>
+        <CardFooter className="border-t px-6 py-4">
+          <Button>Save Changes</Button>
+        </CardFooter>
+      </Card>
+
     </div>
   )
 }

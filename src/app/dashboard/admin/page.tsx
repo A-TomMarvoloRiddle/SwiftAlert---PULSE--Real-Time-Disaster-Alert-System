@@ -15,11 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { SystemAnalytics } from '@/components/admin/system-analytics';
+import { translateText } from '@/ai/flows/translate-text';
 
 const severityVariantMap = {
   low: "default",
   medium: "accent",
-  high: "default",
+  high: "accent",
   critical: "destructive",
 } as const;
 
@@ -46,7 +47,7 @@ export default function AdminPage() {
     loadData();
   }, []);
 
-  const handleSendAlert = (disaster: Disaster) => {
+  const handleSendAlert = async (disaster: Disaster) => {
     if (!firestore || !user) {
         toast({
             variant: "destructive",
@@ -57,10 +58,33 @@ export default function AdminPage() {
     }
 
     const alertsCollection = collection(firestore, `users/${user.uid}/alerts`);
+    const originalMessage = `New ${disaster.type} alert in ${disaster.location}. Severity: ${disaster.severity}.`;
+    
+    // For demonstration, we'll translate to Spanish. In a real app, this would be the user's preference.
+    const targetLanguage = 'Spanish'; 
+    let translatedMessage = originalMessage;
+
+    try {
+        const translationResult = await translateText({ text: originalMessage, language: targetLanguage });
+        translatedMessage = translationResult.translatedText;
+        toast({
+            title: `Alert Translated to ${targetLanguage}`,
+            description: "The alert message has been translated.",
+        });
+    } catch (e) {
+        console.error("Translation failed", e);
+        toast({
+            variant: "destructive",
+            title: "Translation Failed",
+            description: "Could not translate the alert. Sending in English.",
+        });
+    }
+
+
     const newAlert = {
         userId: user.uid,
         disasterEventId: disaster.id,
-        message: `New ${disaster.type} alert in ${disaster.location}. Severity: ${disaster.severity}.`,
+        message: translatedMessage,
         timestamp: new Date().toISOString(),
         channel: "dashboard", // Simulating a dashboard-triggered alert
     };
