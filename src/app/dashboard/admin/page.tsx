@@ -16,7 +16,6 @@ import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { SystemAnalytics } from '@/components/admin/system-analytics';
 import { translateText } from '@/ai/flows/translate-text';
-import { PredictDisasterForm } from '@/components/admin/predict-disaster-form';
 
 const severityVariantMap = {
   low: "default",
@@ -105,7 +104,6 @@ export default function AdminPage() {
         <GenInsightForm />
         <div className="grid gap-4 auto-rows-max">
             <SystemAnalytics disasters={disasters} isLoading={isLoading} />
-            <PredictDisasterForm />
         </div>
       </div>
       
