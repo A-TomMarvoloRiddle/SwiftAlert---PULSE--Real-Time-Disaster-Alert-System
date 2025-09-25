@@ -17,8 +17,8 @@ const EonetEventSchema = z.object({
   title: z.string(),
   link: z.string(),
   description: z.string().nullable(),
-  categories: z.array(z.object({ id: z.string(), title: z.string() })),
-  sources: z.array(z.object({ id: z.string(), url: z.string() })),
+  categories: z.array(z.object({ id: z.string(), title: z.string() })).optional(),
+  sources: z.array(z.object({ id: z.string(), url: z.string() })).optional(),
   geometries: z.array(z.any()), // Allow any object in the array to make parsing more robust
 });
 
@@ -91,12 +91,12 @@ const fetchDisasterDataFlow = ai.defineFlow(
 
     const disasters: Disaster[] = parsedData.data.events
       .map((event) => {
-        const categoryId = event.categories[0]?.id;
+        const categoryId = event.categories?.[0]?.id;
         // Use the mapping, but default to 'cyclone' if no specific category matches
-        const disasterType = categoryToDisasterType[categoryId] || 'cyclone';
+        const disasterType = categoryId ? categoryToDisasterType[categoryId] || 'cyclone' : 'cyclone';
         
         // Use the mapping, but default to 'low' if no severity mapping exists
-        const severity = categoryToSeverity[categoryId] || 'low'; 
+        const severity = categoryId ? categoryToSeverity[categoryId] || 'low' : 'low'; 
         
         // Find the first geometry object that is a point.
         const geometry = event.geometries.find(g => g && g.type === 'Point' && Array.isArray(g.coordinates));
