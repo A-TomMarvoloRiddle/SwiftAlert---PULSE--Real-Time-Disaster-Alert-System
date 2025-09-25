@@ -31,6 +31,8 @@ export default function AdminPage() {
         setDisasters(data);
       } catch (error) {
         console.error("Failed to fetch disaster data", error);
+        // On error, ensure disasters is an empty array
+        setDisasters([]);
       } finally {
         setIsLoading(false);
       }
