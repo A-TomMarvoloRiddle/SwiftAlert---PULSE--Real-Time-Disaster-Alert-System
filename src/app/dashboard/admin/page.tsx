@@ -10,6 +10,7 @@ import type { Disaster } from '@/lib/data';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { fetchDisasterData } from '@/ai/flows/fetch-disaster-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const severityVariantMap = {
   low: "default",
@@ -74,9 +75,13 @@ export default function AdminPage() {
             </TableHeader>
             <TableBody>
               {isLoading && Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={5} className="p-4 text-center">Loading...</TableCell>
-                </TableRow>
+                 <TableRow key={i} className="animate-pulse">
+                    <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                 </TableRow>
               ))}
               {!isLoading && disasters.map((disaster) => (
                 <TableRow key={disaster.id}>
@@ -97,7 +102,7 @@ export default function AdminPage() {
               ))}
                {!isLoading && disasters.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                         No active disasters to display.
                     </TableCell>
                 </TableRow>
