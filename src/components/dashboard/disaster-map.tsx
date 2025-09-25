@@ -1,7 +1,7 @@
 "use client";
 
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
-import { disasters } from "@/lib/data";
+import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import {
@@ -9,6 +9,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 const severityConfig = {
   low: {
@@ -35,6 +37,15 @@ const severityConfig = {
 
 export function DisasterMap() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const firestore = useFirestore();
+  const disasterEventsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? collection(firestore, "disasterEvents")
+        : null,
+    [firestore]
+  );
+  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
 
   if (!apiKey) {
     return (
@@ -66,7 +77,7 @@ export function DisasterMap() {
             { featureType: "water", stylers: [{ color: "hsl(var(--primary) / 0.2)" }] },
           ]}
         >
-          {disasters.map((disaster) => {
+          {disasters && disasters.map((disaster) => {
             const Icon = getDisasterIcon(disaster.type);
             const config = severityConfig[disaster.severity];
             

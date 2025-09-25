@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -7,9 +9,12 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { disasters } from "@/lib/data";
+import type { Disaster } from "@/lib/data";
 import { getDisasterIcon } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy } from "firebase/firestore";
+import { Skeleton } from "../ui/skeleton";
 
 const severityVariantMap = {
   low: "default",
@@ -19,7 +24,15 @@ const severityVariantMap = {
 } as const;
 
 export function AlertsFeed() {
-  const sortedDisasters = [...disasters].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const firestore = useFirestore();
+  const disasterEventsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, "disasterEvents"), orderBy("timestamp", "desc"))
+        : null,
+    [firestore]
+  );
+  const { data: disasters, isLoading } = useCollection<Disaster>(disasterEventsQuery);
 
   return (
     <Card>
@@ -30,7 +43,32 @@ export function AlertsFeed() {
       <CardContent>
         <ScrollArea className="h-[250px]">
           <div className="space-y-4">
-            {sortedDisasters.map((disaster) => {
+            {isLoading && (
+              <>
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              </>
+            )}
+            {disasters && disasters.map((disaster) => {
               const Icon = getDisasterIcon(disaster.type);
               return (
                 <div key={disaster.id} className="flex items-start gap-4">
@@ -41,7 +79,7 @@ export function AlertsFeed() {
                     <div className="flex items-center justify-between">
                       <p className="font-semibold">{disaster.location}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(disaster.date), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(disaster.timestamp), { addSuffix: true })}
                       </p>
                     </div>
                     <p className="text-sm text-muted-foreground">{disaster.details}</p>

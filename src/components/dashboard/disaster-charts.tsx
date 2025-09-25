@@ -14,9 +14,24 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { disasters } from "@/lib/data"
+import type { Disaster } from "@/lib/data"
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
-const chartData = disasters.reduce((acc, disaster) => {
+
+export function DisasterCharts() {
+  const firestore = useFirestore();
+  const disasterEventsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? collection(firestore, "disasterEvents")
+        : null,
+    [firestore]
+  );
+  const { data: disasters } = useCollection<Disaster>(disasterEventsQuery);
+
+  const chartData = disasters
+  ? disasters.reduce((acc, disaster) => {
     const existing = acc.find(d => d.type === disaster.type);
     if (existing) {
         existing.count += 1;
@@ -24,10 +39,10 @@ const chartData = disasters.reduce((acc, disaster) => {
         acc.push({ type: disaster.type, count: 1 });
     }
     return acc;
-}, [] as { type: string, count: number }[]);
+  }, [] as { type: string, count: number }[])
+  : [];
 
 
-export function DisasterCharts() {
   return (
     <Card>
       <CardHeader>
