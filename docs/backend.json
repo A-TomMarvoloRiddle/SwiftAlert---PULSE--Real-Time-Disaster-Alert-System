@@ -34,6 +34,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "badges": {
+          "type": "array",
+          "description": "IDs of earned badges for completing safety drills.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

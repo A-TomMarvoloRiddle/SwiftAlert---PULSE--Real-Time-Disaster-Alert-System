@@ -1,5 +1,5 @@
 import type { SVGProps } from "react";
-import { Waves, Flame, Tornado, Zap, Home, Hospital, ShieldCheck } from 'lucide-react';
+import { Waves, Flame, Tornado, Zap, Home, Hospital, ShieldCheck, Star } from 'lucide-react';
 
 export const PulseLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg
