@@ -1,4 +1,4 @@
-# **App Name**: PULSE: Real-Time Disaster Alert System
+# **App Name**: SwiftAlert
 
 ## Core Features:
 
